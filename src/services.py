@@ -1,28 +1,25 @@
 import json
 import logging
+import re
+from typing import List, Dict
+from src.df_reader import get_dict_from_df
 
-# Создаем регистратор
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)  # Устанавливаем уровень логирования
-stream_handler = logging.StreamHandler()
-stream_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-stream_handler.setFormatter(stream_formatter)
-logger.addHandler(stream_handler)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 
 def simple_search(search: str, transactions: list[dict]) -> str:
     """Поиск транзакций по ключевому слову в описании или категории"""
     # Проверка входных данных
     if not isinstance(search, str):
-        logger.error("Неверный тип запроса")
+        logging.error("Неверный тип запроса")
         raise ValueError("Запрос должен быть строкой")
 
     if not isinstance(transactions, list):
-        logger.error("Неверный тип данных транзакций")
+        logging.error("Неверный тип данных транзакций")
         raise ValueError("Транзакции должны быть списком словарей")
     try:
 
-        logger.info(f"Начат поиск по запросу: {search}")
+        logging.info(f"Начат поиск по запросу: {search}")
 
         # Приведение запроса к нижнему регистру
         search_term = search.lower()
@@ -32,127 +29,104 @@ def simple_search(search: str, transactions: list[dict]) -> str:
             transaction
             for transaction in transactions
             if (
-                isinstance(transaction, dict)
-                and (
-                    search_term in transaction.get("Описание", "").lower()
-                    or search_term in transaction.get("Категория", "").lower()
-                )
+                    isinstance(transaction, dict)
+                    and (
+                            search_term in transaction.get("Описание", "").lower()
+                            or search_term in transaction.get("Категория", "").lower()
+                    )
             )
         ]
 
-        logger.info(f"Найдено {len(results)} совпадений")
+        logging.info(f"Найдено {len(results)} совпадений")
 
         # Конвертация в JSON
         return json.dumps(results, ensure_ascii=False, indent=4, sort_keys=True)
 
     except Exception as e:
-        logger.error(f"Произошла ошибка: {str(e)}")
+        logging.error(f"Произошла ошибка: {str(e)}")
         return json.dumps({"error": "Произошла ошибка при обработке запроса"})
 
 
-aaa = [
-    {
-        "Дата операции": "04.01.2018 15:00:41",
-        "Дата платежа": "05.01.2018",
-        "Номер карты": "*7197",
-        "Статус": "OK",
-        "Сумма операции": -1025.0,
-        "Валюта операции": "RUB",
-        "Сумма платежа": -1025.0,
-        "Валюта платежа": "RUB",
-        "Кэшбэк": 0.0,
-        "Категория": "Топливо",
-        "MCC": 5541.0,
-        "Описание": "Pskov AZS 12 K2",
-        "Бонусы (включая кэшбэк)": 20,
-        "Округление на инвесткопилку": 0,
-        "Сумма операции с округлением": 1025.0,
-    },
-    {
-        "Дата операции": "04.01.2018 14:05:08",
-        "Дата платежа": "06.01.2018",
-        "Номер карты": "*7197",
-        "Статус": "OK",
-        "Сумма операции": -1065.9,
-        "Валюта операции": "RUB",
-        "Сумма платежа": -1065.9,
-        "Валюта платежа": "RUB",
-        "Кэшбэк": 0.0,
-        "Категория": "Супермаркеты",
-        "MCC": 5411.0,
-        "Описание": "Пятёрочка",
-        "Бонусы (включая кэшбэк)": 21,
-        "Округление на инвесткопилку": 0,
-        "Сумма операции с округлением": 1065.9,
-    },
-    {
-        "Дата операции": "03.01.2018 15:03:35",
-        "Дата платежа": "04.01.2018",
-        "Номер карты": "*7197",
-        "Статус": "OK",
-        "Сумма операции": -73.06,
-        "Валюта операции": "RUB",
-        "Сумма платежа": -73.06,
-        "Валюта платежа": "RUB",
-        "Кэшбэк": 0.0,
-        "Категория": "Супермаркеты",
-        "MCC": 5499.0,
-        "Описание": "Magazin 25",
-        "Бонусы (включая кэшбэк)": 1,
-        "Округление на инвесткопилку": 0,
-        "Сумма операции с округлением": 73.06,
-    },
-    {
-        "Дата операции": "03.01.2018 14:55:21",
-        "Дата платежа": "05.01.2018",
-        "Номер карты": "*7197",
-        "Статус": "OK",
-        "Сумма операции": -21.0,
-        "Валюта операции": "RUB",
-        "Сумма платежа": -21.0,
-        "Валюта платежа": "RUB",
-        "Кэшбэк": 0.0,
-        "Категория": "Красота",
-        "MCC": 5977.0,
-        "Описание": "OOO Balid",
-        "Бонусы (включая кэшбэк)": 0,
-        "Округление на инвесткопилку": 0,
-        "Сумма операции с округлением": 21.0,
-    },
-    {
-        "Дата операции": "01.01.2018 20:27:51",
-        "Дата платежа": "04.01.2018",
-        "Номер карты": "*7197",
-        "Статус": "OK",
-        "Сумма операции": -316.0,
-        "Валюта операции": "RUB",
-        "Сумма платежа": -316.0,
-        "Валюта платежа": "RUB",
-        "Кэшбэк": 0.0,
-        "Категория": "Красота",
-        "MCC": 5977.0,
-        "Описание": "OOO Balid",
-        "Бонусы (включая кэшбэк)": 6,
-        "Округление на инвесткопилку": 0,
-        "Сумма операции с округлением": 316.0,
-    },
-    {
-        "Дата операции": "01.01.2018 12:49:53",
-        "Дата платежа": "01.01.2018",
-        "Номер карты": "Нет данных",
-        "Статус": "OK",
-        "Сумма операции": -3000.0,
-        "Валюта операции": "RUB",
-        "Сумма платежа": -3000.0,
-        "Валюта платежа": "RUB",
-        "Кэшбэк": 0.0,
-        "Категория": "Переводы",
-        "MCC": 0.0,
-        "Описание": "Линзомат ТЦ Юность",
-        "Бонусы (включая кэшбэк)": 0,
-        "Округление на инвесткопилку": 0,
-        "Сумма операции с округлением": 3000.0,
-    },
-]
+# Настройка логирования
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
 
-print(simple_search("красота", aaa))
+
+def is_physical_person_transfer(description: str) -> bool:
+    """
+    Проверяет, соответствует ли описание транзакции формату перевода физлицу
+    """
+    # Регулярное выражение для поиска имени и первой буквы фамилии с точкой
+    pattern = r'^[А-Я][а-я]+\s[А-Я]\.$'
+    return bool(re.match(pattern, description))
+
+
+def filter_transfers_to_physical_persons(transactions: List[Dict]) -> List[Dict]:
+    """
+    Фильтрует транзакции по критериям переводов физлицам
+    """
+    filtered_transactions = []
+
+    for transaction in transactions:
+        try:
+            # Проверяем категорию и формат описания
+            if (
+                    transaction.get('Категория') == 'Переводы' and
+                    is_physical_person_transfer(transaction.get('Описание', ''))
+            ):
+                filtered_transactions.append(transaction)
+        except Exception as e:
+            logging.error(f"Ошибка при обработке транзакции: {e}")
+
+    return filtered_transactions
+
+
+def search_physical_person_transfers(transactions: List[Dict]) -> str:
+    """
+    Основная функция поиска переводов физлицам с формированием JSON-ответа
+    """
+    try:
+        # Фильтруем транзакции
+        filtered_transactions = filter_transfers_to_physical_persons(transactions)
+
+        # Формируем JSON-ответ
+        result = {
+            "transactions": filtered_transactions,
+            "count": len(filtered_transactions)
+        }
+
+        logging.info(f"Найдено {len(filtered_transactions)} переводов физлицам")
+        return json.dumps(result, ensure_ascii=False, indent=4)
+
+    except Exception as e:
+        logging.error(f"Критическая ошибка: {e}")
+        return json.dumps({"error": str(e)})
+
+
+# Пример использования
+if __name__ == "__main__":
+    sample_transactions = [
+        {
+            "Дата операции": "2025-10-18",
+            "Дата платежа": "2025-10-18",
+            "Номер карты": "1234",
+            "Статус": "OK",
+            "Сумма операции": 1000,
+            "Валюта операции": "RUB",
+            "Сумма платежа": 1000,
+            "Валюта платежа": "RUB",
+            "Кешбэк": 0,
+            "Категория": "Переводы",
+            "MCC": "6011",
+            "Описание": "Валерий А.",
+            "Бонусы (включая кешбэк)": 0,
+            "Округление на «Инвесткопилку»": 0,
+            "Сумма операции с округлением": 1000
+        },
+        # Другие транзакции...
+    ]
+
+    result = search_physical_person_transfers(sample_transactions)
+    print(result)
