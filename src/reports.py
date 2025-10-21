@@ -1,12 +1,11 @@
-import os
-from src.df_reader import load_data_from_excel
-import datetime
 import json
-from typing import Callable, Optional
-import pandas as pd
-from functools import wraps
 import logging
+import os
+from datetime import datetime, time, timedelta
+from functools import wraps
+from typing import Callable, Optional, Any
 
+import pandas as pd
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -15,29 +14,34 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 def report_decorator(filename: Optional[str] = None) -> Callable:
     def decorator(func: Callable[[pd.DataFrame, str, Optional[str]], pd.DataFrame]) -> Callable:
         @wraps(func)
-        def wrapper(*args, **kwargs) -> pd.DataFrame:
-            result: pd.DataFrame = func(*args, **kwargs)
+        def wrapper(*args: Any, **kwargs: Any) -> pd.DataFrame:
+            result = func(*args, **kwargs)
+
+            # Создаем путь к директории для отчетов
+            report_dir = "src/reports"
+            if not os.path.exists(report_dir):
+                os.makedirs(report_dir)
 
             if filename is None:
-                report_name = f"report_{func.__name__}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+                report_name = f"report_{func.__name__}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
             else:
                 report_name = filename
 
             try:
-                def datetime_converter(obj) -> None:
+
+                def datetime_converter(obj: object) -> str:
                     if isinstance(obj, pd._libs.tslibs.timestamps.Timestamp):
                         return obj.strftime("%Y-%m-%d %H:%M:%S")
                     raise TypeError
 
-                with open(report_name, "w", encoding="utf-8") as f:
+                # Формируем полный путь к файлу
+                full_path = os.path.join(report_dir, report_name)
+
+                with open(full_path, "w", encoding="utf-8") as f:
                     json.dump(
-                        result.to_dict(orient="records"),
-                        f,
-                        ensure_ascii=False,
-                        indent=4,
-                        default=datetime_converter
+                        result.to_dict(orient="records"), f, ensure_ascii=False, indent=4, default=datetime_converter
                     )
-                logging.info(f"Отчет успешно сохранен в файл: {report_name}")
+                logging.info(f"Отчет успешно сохранен в файл: {full_path}")
             except Exception as e:
                 logging.error(f"Ошибка при сохранении отчета: {str(e)}")
 
@@ -47,69 +51,84 @@ def report_decorator(filename: Optional[str] = None) -> Callable:
 
     return decorator
 
+
 @report_decorator()
 def spending_by_category(transactions: pd.DataFrame, category: str, date: Optional[str] = None) -> pd.DataFrame:
-    try:
-        # Обработка даты (без изменений)
-        if date is None:
-            end_date = datetime.now().replace(hour=0, minute=0, second=0)
-        else:
-            date_str = date.split()[0]
-            end_date = pd.to_datetime(date_str, format="%d.%m.%Y", dayfirst=True)
-            end_date = end_date.replace(hour=0, minute=0, second=0)
+    # Преобразуем даты в DataFrame в правильный формат
+    transactions["Дата операции"] = pd.to_datetime(transactions["Дата операции"], format="%d.%m.%Y %H:%M:%S")
 
-        start_date = end_date - pd.DateOffset(months=3)
+    # Обработка переданной даты
+    if date is None:
+        end_date = datetime.now()
+    else:
+        try:
+            # Пытаемся парсить с временем
+            end_date = datetime.strptime(date, "%d.%m.%Y %H:%M:%S")
+        except ValueError:
+            # Если не получилось, парсим только дату
+            end_date = datetime.strptime(date, "%d.%m.%Y")
+            # Добавляем максимальное время дня
+            end_date = datetime.combine(end_date, time(23, 59, 59))
 
-        # Преобразуем даты в датафрейме (без изменений)
-        transactions["Дата операции"] = pd.to_datetime(
-            transactions["Дата операции"],
-            format="%d.%m.%Y %H:%M:%S",
-            dayfirst=True
+    # Рассчитываем начальную дату (3 месяца назад)
+    start_date = end_date - timedelta(days=90)
+    # Приводим категории к нижнему регистру для поиска
+    transactions["Категория_lower"] = transactions["Категория"].str.lower()
+    search_term = category.lower()
+
+    # Фильтрация с учетом частичного совпадения
+    filtered_df = transactions[
+        (transactions["Дата операции"] >= start_date)
+        & (transactions["Дата операции"] <= end_date)
+        & (transactions["Категория_lower"].str.contains(search_term, na=False))
+    ]
+
+    logging.info(f"Исходная дата: {end_date}")
+    logging.info(f"Начальная дата: {start_date}")
+    logging.info(f"Категория поиска: {category}")
+    logging.info(f"Количество записей после фильтрации: {len(filtered_df)}")
+
+    if not filtered_df.empty:
+        result_df = (
+            filtered_df.groupby(["Дата операции", "Категория"])
+            .agg(ИТОГО=("Сумма операции", "sum"), ВСЕГО=("Сумма операции", "count"))
+            .reset_index()
+        )
+        # Форматируем дату обратно в строку
+        result_df["Дата операции"] = result_df["Дата операции"].dt.strftime("%d.%m.%Y %H:%M:%S")
+        # Округление значений
+        result_df["ИТОГО"] = result_df["ИТОГО"].round(2)
+        result_df["ВСЕГО"] = result_df["ВСЕГО"].round(2)
+
+        # Удаляем вспомогательный столбец
+        result_df.drop(columns=["Категория_lower"], errors="ignore", inplace=True)
+
+        # Создаем итоговую строку
+        total_spending = filtered_df["Сумма операции"].sum().round(2)
+        total_transactions = filtered_df.shape[0]
+
+        total_row = pd.DataFrame(
+            {
+                "Дата операции": ["Итоговая"],
+                "Категория": ["сумма"],
+                "ИТОГО": [total_spending],
+                "ВСЕГО": [total_transactions],
+            }
         )
 
-        # Приводим категории к нижнему регистру для поиска
-        transactions['Категория_lower'] = transactions['Категория'].str.lower()
-        search_term = category.lower()
+        # Добавляем итоговую строку в конец
+        result_df = pd.concat([result_df, total_row], ignore_index=True)
 
-        # Фильтрация с учетом частичного совпадения
-        filtered_df = transactions[
-            (transactions["Дата операции"] >= start_date) &
-            (transactions["Дата операции"] <= end_date) &
-            (transactions['Категория_lower'].str.contains(search_term, na=False))
-            ]
-
-        logging.info(f"Исходная дата: {end_date}")
-        logging.info(f"Начальная дата: {start_date}")
-        logging.info(f"Категория поиска: {category}")
-        logging.info(f"Количество записей после фильтрации: {len(filtered_df)}")
-
-        if not filtered_df.empty:
-            result_df = (
-                filtered_df.groupby(["Дата операции", "Категория"])
-                .agg(
-                    total_amount=("Сумма операции", "sum"),
-                    transactions_count=("Сумма операции", "count")
-                )
-                .reset_index()
-            )
-            # Удаляем вспомогательный столбец
-            result_df.drop(columns=['Категория_lower'], errors='ignore', inplace=True)
-        else:
-            logging.warning("Фильтрация вернула пустой DataFrame")
-            return pd.DataFrame()
-
+        print(f"Минимальная допустимая дата operations.xlsx: {transactions['Дата операции'].min()}")
+        print(f"Максимальная допустимая дата operations.xlsx: {transactions['Дата операции'].max()}")
         return result_df
-
-    except Exception as e:
-        logging.error(f"Ошибка при формировании отчета: {str(e)}")
+    else:
+        logging.warning("Фильтрация вернула пустой DataFrame")
         return pd.DataFrame()
-
-
-
 
 
 if __name__ == "__main__":
     file_path = os.path.join("..", "data", "operations.xlsx")
-    df = load_data_from_excel(file_path)
-    result = spending_by_category(df, "апт", '01.01.2020')
+    df = pd.read_excel(file_path)
+    result = spending_by_category(df, "Пополнения", "15.01.2020")
     print(result)

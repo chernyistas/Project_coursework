@@ -1,8 +1,10 @@
 import json
 import logging
+import os
 import re
-from typing import List, Dict
-from src.df_reader import get_dict_from_df
+from typing import Dict, List
+
+from src.df_reader import load_and_convert_excel_to_dict
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
@@ -17,23 +19,27 @@ def simple_search(search: str, transactions: list[dict]) -> str:
     if not isinstance(transactions, list):
         logging.error("Неверный тип данных транзакций")
         raise ValueError("Транзакции должны быть списком словарей")
-    try:
 
+    try:
         logging.info(f"Начат поиск по запросу: {search}")
 
         # Приведение запроса к нижнему регистру
         search_term = search.lower()
 
-        # Фильтрация транзакций
+        # Фильтрация транзакций с проверкой типов
         results = [
             transaction
             for transaction in transactions
-            if (
-                    isinstance(transaction, dict)
-                    and (
-                            search_term in transaction.get("Описание", "").lower()
-                            or search_term in transaction.get("Категория", "").lower()
-                    )
+            if isinstance(transaction, dict)
+            and (
+                (
+                    isinstance(transaction.get("Описание"), str)
+                    and search_term in transaction.get("Описание", "").lower()
+                )
+                or (
+                    isinstance(transaction.get("Категория"), str)
+                    and search_term in transaction.get("Категория", "").lower()
+                )
             )
         ]
 
@@ -47,19 +53,12 @@ def simple_search(search: str, transactions: list[dict]) -> str:
         return json.dumps({"error": "Произошла ошибка при обработке запроса"})
 
 
-# Настройка логирования
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
-
-
 def is_physical_person_transfer(description: str) -> bool:
     """
     Проверяет, соответствует ли описание транзакции формату перевода физлицу
     """
     # Регулярное выражение для поиска имени и первой буквы фамилии с точкой
-    pattern = r'^[А-Я][а-я]+\s[А-Я]\.$'
+    pattern = r"^[А-Я][а-я]+\s[А-Я]\.$"
     return bool(re.match(pattern, description))
 
 
@@ -72,9 +71,8 @@ def filter_transfers_to_physical_persons(transactions: List[Dict]) -> List[Dict]
     for transaction in transactions:
         try:
             # Проверяем категорию и формат описания
-            if (
-                    transaction.get('Категория') == 'Переводы' and
-                    is_physical_person_transfer(transaction.get('Описание', ''))
+            if transaction.get("Категория") == "Переводы" and is_physical_person_transfer(
+                transaction.get("Описание", "")
             ):
                 filtered_transactions.append(transaction)
         except Exception as e:
@@ -92,10 +90,7 @@ def search_physical_person_transfers(transactions: List[Dict]) -> str:
         filtered_transactions = filter_transfers_to_physical_persons(transactions)
 
         # Формируем JSON-ответ
-        result = {
-            "transactions": filtered_transactions,
-            "count": len(filtered_transactions)
-        }
+        result = {"transactions": filtered_transactions, "count": len(filtered_transactions)}
 
         logging.info(f"Найдено {len(filtered_transactions)} переводов физлицам")
         return json.dumps(result, ensure_ascii=False, indent=4)
@@ -107,26 +102,6 @@ def search_physical_person_transfers(transactions: List[Dict]) -> str:
 
 # Пример использования
 if __name__ == "__main__":
-    sample_transactions = [
-        {
-            "Дата операции": "2025-10-18",
-            "Дата платежа": "2025-10-18",
-            "Номер карты": "1234",
-            "Статус": "OK",
-            "Сумма операции": 1000,
-            "Валюта операции": "RUB",
-            "Сумма платежа": 1000,
-            "Валюта платежа": "RUB",
-            "Кешбэк": 0,
-            "Категория": "Переводы",
-            "MCC": "6011",
-            "Описание": "Валерий А.",
-            "Бонусы (включая кешбэк)": 0,
-            "Округление на «Инвесткопилку»": 0,
-            "Сумма операции с округлением": 1000
-        },
-        # Другие транзакции...
-    ]
-
-    result = search_physical_person_transfers(sample_transactions)
-    print(result)
+    file_path = os.path.join("..", "data", "operations.xlsx")
+    df_dict = load_and_convert_excel_to_dict(file_path)
+    print(search_physical_person_transfers(df_dict))
