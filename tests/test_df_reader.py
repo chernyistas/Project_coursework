@@ -1,14 +1,14 @@
 from unittest.mock import patch
 
 import pandas as pd
+
 from src.df_reader import load_and_convert_excel_to_dict
 
 
 # Тест успешной загрузки и конвертации
 def test_success_conversion(test_data: pd.DataFrame) -> None:
-    # Создаем DataFrame для имитации чтения Excel
-    df = pd.DataFrame(test_data)
 
+    df = pd.DataFrame(test_data)
     with patch("pandas.read_excel") as mock_read_excel:
         mock_read_excel.return_value = df
         result = load_and_convert_excel_to_dict("test.xlsx")

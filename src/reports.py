@@ -18,7 +18,7 @@ def report_decorator(filename: Optional[str] = None) -> Callable:
             result = func(*args, **kwargs)
 
             # Создаем путь к директории для отчетов
-            report_dir = "../src/reports"
+            report_dir = r"..\src\reports"
             if not os.path.exists(report_dir):
                 os.makedirs(report_dir)
 

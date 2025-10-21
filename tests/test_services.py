@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Union
 from unittest.mock import Mock, patch
 
 import pytest
+
 from src.services import (filter_transfers_to_physical_persons, is_physical_person_transfer,
                           search_physical_person_transfers, simple_search)
 
@@ -36,7 +37,6 @@ search_invalid_values: List[Union[int, float, list, dict, bytes, bool]] = [123, 
 def test_simple_search_invalid_search(transactions: List[Transaction], search: str) -> None:
     # Тест на проверку некорректных значений поискового запроса
     with pytest.raises(ValueError) as excinfo:
-        # Передаем некорректный поисковый запрос и корректные транзакции
         simple_search(search, transactions)
     assert str(excinfo.value) == "Запрос должен быть строкой"
 
@@ -74,7 +74,7 @@ def test_empty_input() -> None:
     # Тест на пустой ввод поиска транзакций физ лиц
     result = search_physical_person_transfers([])
     data = json.loads(result)
-    assert data["count"] == 0
+    assert data["Итого"] == 0
     assert len(data["transactions"]) == 0
 
 
@@ -86,7 +86,7 @@ def test_mock_no_transactions() -> None:
         result = search_physical_person_transfers([])
         data = json.loads(result)
 
-        assert data["count"] == 0
+        assert data["Итого"] == 0
         assert len(data["transactions"]) == 0
 
 
@@ -97,7 +97,7 @@ def test_mock_with_empty_input() -> None:
         result = search_physical_person_transfers("transactions")  # type: ignore
         data = json.loads(result)
 
-        assert data["count"] == 0
+        assert data["Итого"] == 0
         assert len(data["transactions"]) == 0
 
 
@@ -108,4 +108,4 @@ def test_mock_with_invalid_input() -> None:
         result = search_physical_person_transfers("неверный_тип")  # type: ignore
         data = json.loads(result)
 
-        assert data == {"count": 0, "transactions": []}
+        assert data == {"Итого": 0, "transactions": []}
