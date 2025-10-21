@@ -10,7 +10,6 @@ def load_and_convert_excel_to_dict(file_path: str) -> list[dict]:
     try:
         # Читаем Excel файл
         df = pd.read_excel(file_path)
-
         # Обрабатываем пропущенные значения
         df = df.fillna({"Номер карты": "Нет данных", "Кэшбэк": 0, "MCC": 0})
 

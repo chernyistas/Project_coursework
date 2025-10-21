@@ -3,7 +3,7 @@ import logging
 import os
 from datetime import datetime, time, timedelta
 from functools import wraps
-from typing import Callable, Optional, Any
+from typing import Any, Callable, Optional
 
 import pandas as pd
 
@@ -18,7 +18,7 @@ def report_decorator(filename: Optional[str] = None) -> Callable:
             result = func(*args, **kwargs)
 
             # Создаем путь к директории для отчетов
-            report_dir = "src/reports"
+            report_dir = "../src/reports"
             if not os.path.exists(report_dir):
                 os.makedirs(report_dir)
 
@@ -125,10 +125,3 @@ def spending_by_category(transactions: pd.DataFrame, category: str, date: Option
     else:
         logging.warning("Фильтрация вернула пустой DataFrame")
         return pd.DataFrame()
-
-
-if __name__ == "__main__":
-    file_path = os.path.join("..", "data", "operations.xlsx")
-    df = pd.read_excel(file_path)
-    result = spending_by_category(df, "Пополнения", "15.01.2020")
-    print(result)

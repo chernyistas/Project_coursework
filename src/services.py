@@ -55,7 +55,7 @@ def simple_search(search: str, transactions: list[dict]) -> str:
 
 def is_physical_person_transfer(description: str) -> bool:
     """
-    Проверяет, соответствует ли описание транзакции формату перевода физлицу
+    Проверяет, соответствует ли описание транзакции формату перевода физ лицу
     """
     # Регулярное выражение для поиска имени и первой буквы фамилии с точкой
     pattern = r"^[А-Я][а-я]+\s[А-Я]\.$"
@@ -64,7 +64,7 @@ def is_physical_person_transfer(description: str) -> bool:
 
 def filter_transfers_to_physical_persons(transactions: List[Dict]) -> List[Dict]:
     """
-    Фильтрует транзакции по критериям переводов физлицам
+    Фильтрует транзакции по критериям переводов физ лицам
     """
     filtered_transactions = []
 
@@ -83,16 +83,16 @@ def filter_transfers_to_physical_persons(transactions: List[Dict]) -> List[Dict]
 
 def search_physical_person_transfers(transactions: List[Dict]) -> str:
     """
-    Основная функция поиска переводов физлицам с формированием JSON-ответа
+    Основная функция поиска переводов физ лицам с формированием JSON-ответа
     """
     try:
         # Фильтруем транзакции
         filtered_transactions = filter_transfers_to_physical_persons(transactions)
 
         # Формируем JSON-ответ
-        result = {"transactions": filtered_transactions, "count": len(filtered_transactions)}
+        result = {"transactions": filtered_transactions, "Итого": len(filtered_transactions)}
 
-        logging.info(f"Найдено {len(filtered_transactions)} переводов физлицам")
+        logging.info(f"Найдено {len(filtered_transactions)} переводов физ лицам")
         return json.dumps(result, ensure_ascii=False, indent=4)
 
     except Exception as e:
