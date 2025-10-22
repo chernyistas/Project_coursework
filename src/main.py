@@ -6,6 +6,7 @@ import pandas as pd
 from src.df_reader import load_and_convert_excel_to_dict
 from src.reports import spending_by_category
 from src.services import search_physical_person_transfers, simple_search
+from src.views import get_events
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -17,11 +18,12 @@ def main() -> None:
     print("1. Простой поиск по описанию или категории")
     print("2. Поиск переводов физическим лицам")
     print("3. Отчет по тратам по категории")
+    print("4. Итог по всем финансовым данным — расходы, доходы, валюты, акции")
     print("0. Выход")
 
     try:
         # Загрузка данных из Excel
-        file_path = os.path.join("data", "operations.xlsx")
+        file_path = os.path.join("../data", "operations.xlsx")
 
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"Файл {file_path} не найден")
@@ -32,7 +34,7 @@ def main() -> None:
 
         while True:
             try:
-                choice = input("\nВыберите действие (0-3): ")
+                choice = input("\nВыберите действие (0-4): ")
 
                 if choice == "0":
                     print("До свидания!")
@@ -57,6 +59,14 @@ def main() -> None:
                     result = spending_by_category(df, category, date)
                     print("\nОтчет по тратам:")
                     print(result)
+
+                elif choice == "4":
+                    date_str = input("Введите дату в формате ГГГГ-ММ-ДД")
+                    # range_type = input()
+                    result = get_events(date_str)
+                    print(result)
+
+
 
                 else:
                     print("Неверный выбор. Попробуйте снова.")

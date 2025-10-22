@@ -1,3 +1,6 @@
+import json
+
+import pandas as pd
 import pytest
 
 
@@ -156,3 +159,25 @@ def test_physical_transactions() -> list:
         {"Категория": "Переводы", "Описание": "Сидоров С."},
         {"Категория": "Переводы", "Описание": "Некорректный формат"},
     ]
+
+
+@pytest.fixture
+def sample_df():
+    """Пример DataFrame для тестов"""
+    data = {
+        "Дата операции": ["01.10.2025", "02.10.2025", "03.10.2025"],
+        "Сумма операции": [1000, -500, -200],
+        "Категория": ["Зарплата", "Еда", "Транспорт"],
+        "Статус": ["OK", "OK", "OK"],
+    }
+    return pd.DataFrame(data)
+
+
+@pytest.fixture
+def mock_settings_file(tmp_path):
+    """Создание временного user_settings.json"""
+    settings = {"user_currencies": ["USD", "EUR"], "user_stocks": ["AAPL", "AMZN"]}
+    settings_path = tmp_path / "user_settings.json"
+    with open(settings_path, "w", encoding="utf-8") as f:
+        json.dump(settings, f)
+    return settings_path
