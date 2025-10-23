@@ -11,7 +11,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 
-def get_events(date_str, range_type="M"):
+def get_events(date_str: str, range_type: str = "M") -> str:
     """
     Главная функция страницы «События».
     """
@@ -45,4 +45,4 @@ def get_events(date_str, range_type="M"):
 
 
 if __name__ == "__main__":
-    print(get_events("2019-05-20"))
+    print(get_events("20-05-2019"))

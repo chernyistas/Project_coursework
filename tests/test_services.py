@@ -4,8 +4,12 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from src.services import (filter_transfers_to_physical_persons, is_physical_person_transfer,
-                          search_physical_person_transfers, simple_search)
+from src.services import (
+    filter_transfers_to_physical_persons,
+    is_physical_person_transfer,
+    search_physical_person_transfers,
+    simple_search,
+)
 
 
 def test_simple_search_success(transactions: List[Dict[str, str]]) -> None:

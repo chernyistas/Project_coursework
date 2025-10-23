@@ -1,13 +1,12 @@
 import json
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pandas as pd
 
 from src.views import get_events
 
-
-
 # Успешный сценарий
+
 
 @patch("src.views.pd.read_excel")
 @patch("src.views.get_exchange_rates")
@@ -16,13 +15,14 @@ from src.views import get_events
 @patch("src.views.get_incomes_summary")
 @patch("src.views.filter_by_range")
 def test_get_events_success(
-    mock_filter_by_range,
-    mock_get_incomes_summary,
-    mock_get_expenses_summary,
-    mock_get_sp500_quotes,
-    mock_get_exchange_rates,
-    mock_read_excel,
-):
+    mock_filter_by_range: Mock,
+    mock_get_incomes_summary: Mock,
+    mock_get_expenses_summary: Mock,
+    mock_get_sp500_quotes: Mock,
+    mock_get_exchange_rates: Mock,
+    mock_read_excel: Mock,
+) -> None:
+    # Тест успешного сценария выполнения get_events.
 
     # Поддельный DataFrame для excel
     df = pd.DataFrame(
@@ -61,7 +61,9 @@ def test_get_events_success(
 
 
 @patch("src.views.pd.read_excel", side_effect=FileNotFoundError("Нет файла"))
-def test_get_events_excel_not_found(mock_read_excel):
+def test_get_events_excel_not_found(mock_read_excel: Mock) -> None:
+    # Тест — Excel не найден.
+
     result_str = get_events("2025-10-22")
     result = json.loads(result_str)
     assert "error" in result
@@ -74,7 +76,12 @@ def test_get_events_excel_not_found(mock_read_excel):
 @patch("src.views.pd.read_excel")
 @patch("src.views.filter_by_range")
 @patch("src.views.get_exchange_rates", side_effect=Exception("Ошибка API"))
-def test_get_events_error_in_exchange_api(mock_get_ex, mock_filter_by_range, mock_read_excel):
+def test_get_events_error_in_exchange_api(
+    mock_get_ex: Mock,
+    mock_filter_by_range: Mock,
+    mock_read_excel: Mock,
+) -> None:  # Тест — исключение при получении курсов валют.
+
     df = pd.DataFrame(
         {"Дата операции": ["2025-10-01"], "Сумма операции": [100], "Категория": ["Зарплата"], "Статус": ["OK"]}
     )

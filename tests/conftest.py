@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 import pandas as pd
 import pytest
@@ -162,7 +163,7 @@ def test_physical_transactions() -> list:
 
 
 @pytest.fixture
-def sample_df():
+def sample_df() -> pd.DataFrame:
     """Пример DataFrame для тестов"""
     data = {
         "Дата операции": ["01.10.2025", "02.10.2025", "03.10.2025"],
@@ -174,7 +175,7 @@ def sample_df():
 
 
 @pytest.fixture
-def mock_settings_file(tmp_path):
+def mock_settings_file(tmp_path: Path) -> Path:
     """Создание временного user_settings.json"""
     settings = {"user_currencies": ["USD", "EUR"], "user_stocks": ["AAPL", "AMZN"]}
     settings_path = tmp_path / "user_settings.json"
